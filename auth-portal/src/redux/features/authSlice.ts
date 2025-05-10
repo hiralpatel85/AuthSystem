@@ -1,32 +1,33 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-interface AuthState {
-  token: string | null;
-  error: string | null;
-}
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import { AuthState } from "../../types";
 
 const initialState: AuthState = {
   token: null,
-  error: null,
+  isAuthenticated: false,
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
-    setToken(state, action: PayloadAction<string>) {
+    setAuthToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
-      state.error = null;
+      state.isAuthenticated = true;
     },
-    setError(state, action: PayloadAction<string>) {
-      state.error = action.payload;
-    },
-    clearAuth(state) {
+    clearAuthToken: (state) => {
       state.token = null;
-      state.error = null;
+      state.isAuthenticated = false;
     },
   },
 });
 
-export const { setToken, setError, clearAuth } = authSlice.actions;
-export default authSlice.reducer;
+const persistConfig = {
+  key: "auth",
+  storage,
+};
+
+export const { setAuthToken, clearAuthToken } = authSlice.actions;
+
+export default persistReducer(persistConfig, authSlice.reducer);

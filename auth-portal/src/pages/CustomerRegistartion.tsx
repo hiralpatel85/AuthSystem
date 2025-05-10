@@ -2,9 +2,10 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { validationSchema } from "../utils/validationSchema";
+import { toast } from "react-toastify";
 import { RegisterFormValues } from "../types";
-
+import { registerCustomer } from "../services/api";
+import { validationSchema } from "../utils/validationSchema";
 
 const CustomerRegister = () => {
   const navigate = useNavigate();
@@ -21,10 +22,26 @@ const CustomerRegister = () => {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       try {
-        console.log("🚀 ~ onSubmit: ~ values:", values);
-        navigate("/verify", { state: { email: values.email } });
+        const response = await registerCustomer(
+          values.firstName,
+          values.lastName,
+          values.email,
+          values.password
+        );
+
+        if (response.success) {
+          toast.success(
+            response?.data?.message ||
+              "Customer registration successfully. Please verify your email."
+          );
+          navigate(`/verify?email=${response?.data?.email}`, {
+            state: { email: values.email },
+          });
+        } else {
+          toast.error(response.message || "Registration failed");
+        }
       } catch (error: any) {
-        alert(error.response?.data?.error || "Registration failed");
+        toast.error(error?.message || "Registration failed");
       }
     },
   });
@@ -42,41 +59,42 @@ const CustomerRegister = () => {
         </h2>
         <form onSubmit={formik.handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700">
               First Name
             </label>
             <input
-              id="firstName"
               type="text"
-              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg"
               {...formik.getFieldProps("firstName")}
             />
             {formik.touched.firstName && formik.errors.firstName ? (
-              <div className="text-red-600 text-sm">{formik.errors.firstName}</div>
+              <div className="text-red-600 text-sm">
+                {formik.errors.firstName}
+              </div>
             ) : null}
           </div>
           <div className="mb-4">
-            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700">
               Last Name
             </label>
             <input
-              id="lastName"
               type="text"
-              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg"
               {...formik.getFieldProps("lastName")}
             />
             {formik.touched.lastName && formik.errors.lastName ? (
-              <div className="text-red-600 text-sm">{formik.errors.lastName}</div>
+              <div className="text-red-600 text-sm">
+                {formik.errors.lastName}
+              </div>
             ) : null}
           </div>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700">
               Email
             </label>
             <input
-              id="email"
               type="email"
-              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg"
               {...formik.getFieldProps("email")}
             />
             {formik.touched.email && formik.errors.email ? (
@@ -84,24 +102,25 @@ const CustomerRegister = () => {
             ) : null}
           </div>
           <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700">
               Password
             </label>
             <input
-              id="password"
               type="password"
-              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg"
               {...formik.getFieldProps("password")}
             />
             {formik.touched.password && formik.errors.password ? (
-              <div className="text-red-600 text-sm">{formik.errors.password}</div>
+              <div className="text-red-600 text-sm">
+                {formik.errors.password}
+              </div>
             ) : null}
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg hover:shadow-lg transition duration-300"
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg"
           >
             Register
           </motion.button>

@@ -1,9 +1,13 @@
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useDispatch } from "react-redux";
-import { setError } from "../redux/features/authSlice";
 import { motion } from "framer-motion";
 import { LoginFormValues } from "../types";
+import { adminLogin } from "../services/api";
+import { toast } from "react-toastify";
+import { setUser } from "../redux/features/userSlice";
+import { useNavigate } from "react-router-dom";
+import { setAuthToken } from "../redux/features/authSlice";
 
 const validationSchema = Yup.object({
   email: Yup.string().email("Invalid email").required("Email is required"),
@@ -12,6 +16,7 @@ const validationSchema = Yup.object({
 
 const AdminLogin = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const formik = useFormik<LoginFormValues>({
     initialValues: {
@@ -21,13 +26,31 @@ const AdminLogin = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        console.log("🚀 ~ onSubmit: ~ values:", values);
-        alert("Login successful");
+        const response = await adminLogin(values.email, values.password);
+
+        if (response.success) {
+          dispatch(
+            setUser({
+              id: response.data.user?.id,
+              firstName: response.data.user?.firstName,
+              lastName: response.data.user?.lastName,
+              email: response.data.user?.email,
+              role: response.data.user?.role,
+              isVerified: response.data.user?.isVerified,
+            })
+          );
+
+          dispatch(setAuthToken(response.data.token));
+
+          toast.success(response.message || "Login successful!");
+        } else {
+          toast.error(response.message || "Login failed");
+        }
       } catch (error: any) {
-        console.log("🚀 ~ onSubmit: ~ error:", error);
-        const errorMessage = "Login failed";
-        dispatch(setError(errorMessage));
-        alert(errorMessage);
+        if (error?.data && error?.data?.isVerified === false) {
+          navigate(`/verify?email=${values?.email}`);
+        }
+        toast.error(error?.message || "An error occurred during login");
       }
     },
   });

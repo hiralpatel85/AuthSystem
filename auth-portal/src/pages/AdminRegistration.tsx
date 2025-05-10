@@ -1,15 +1,17 @@
 import { useFormik } from "formik";
-import * as Yup from "yup";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import { validationSchema } from "../utils/validationSchema";
+import { registerAdmin } from "../services/api";
 import { RegisterFormValues } from "../types";
+import { toast } from "react-toastify";
 
 const AdminRegister = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const initialValues: RegisterFormValues = {
     firstName: "",
     lastName: "",
@@ -21,10 +23,24 @@ const AdminRegister = () => {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       try {
-        console.log("🚀 ~ onSubmit: ~ values:", values);
-        navigate("/verify", { state: { email: values.email } });
+        setLoading(true);
+        const response = await registerAdmin(
+          values.firstName,
+          values.lastName,
+          values.email,
+          values.password
+        );
+        toast.success(
+          response?.data?.message ||
+            "Admin registration successfully. Please verify your email."
+        );
+        navigate(`/verify?email=${response?.data?.email}`, {
+          state: { email: values.email },
+        });
       } catch (error: any) {
-        alert(error.response?.data?.error || "Registration failed");
+        toast.error(error.message || "Registration failed");
+      } finally {
+        setLoading(false);
       }
     },
   });
@@ -125,11 +141,28 @@ const AdminRegister = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"
+            disabled={loading}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg hover:shadow-lg transition duration-300"
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </motion.button>
         </form>
+        <motion.div
+          className="text-center mt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link
+              to="/admin/login"
+              className="text-blue-500 font-semibold hover:text-blue-700 transition duration-300"
+            >
+              Login
+            </Link>
+          </p>
+        </motion.div>
       </motion.div>
     </div>
   );

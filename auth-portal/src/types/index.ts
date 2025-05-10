@@ -1,3 +1,5 @@
+import store from "../redux/store";
+
 export interface RegisterFormValues {
     firstName: string;
     lastName: string;
@@ -13,3 +15,19 @@ export interface RegisterFormValues {
   export interface VerifyFormValues {
     code: string;
   }
+
+  export type RootState = ReturnType<typeof store.getState>;
+
+  export interface UserState {
+  id: number | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  role: string | null;
+  isVerified: boolean;
+}
+
+export interface AuthState {
+  token: string | null;
+  isAuthenticated: boolean;
+}
