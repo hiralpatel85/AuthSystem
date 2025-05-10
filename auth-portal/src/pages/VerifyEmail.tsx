@@ -2,19 +2,42 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { verifyEmailSchema } from "../utils/validationSchema";
 import { VerifyFormValues } from "../types";
-
+import { verifyEmail, resendVerificationCode } from "../services/api";
+import { toast } from "react-toastify";
 
 const VerifyEmail: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  const email = queryParams.get("email") || ""; 
+  const email = queryParams.get("email") || "";
 
-  const [otp, setOtp] = useState<string[]>(Array(6).fill("")); 
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+ 
+  useEffect(() => {
+    formik.setFieldValue("code", otp.join(""));
+  }, [otp]);
+
+  const handleResendCode = async () => {
+    try {
+       formik.setFieldValue("code", "");
+       setOtp(Array(6).fill(""))
+      setIsResending(true);
+      await resendVerificationCode(email);
+      toast.success("Verification code resent successfully!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (
@@ -25,18 +48,6 @@ const VerifyEmail: React.FC = () => {
       !e.metaKey
     ) {
       e.preventDefault();
-    }
-
-    if (e.key === "Delete" || e.key === "Backspace") {
-      const index = inputRefs.current.indexOf(e.target as HTMLInputElement);
-      if (index > 0) {
-        setOtp((prevOtp) => [
-          ...prevOtp.slice(0, index - 1),
-          "",
-          ...prevOtp.slice(index),
-        ]);
-        inputRefs.current[index - 1]?.focus();
-      }
     }
   };
 
@@ -71,15 +82,19 @@ const VerifyEmail: React.FC = () => {
 
   const formik = useFormik<VerifyFormValues>({
     initialValues: {
-      code: otp.join(""), 
+      code: otp.join(""),
     },
     validationSchema: verifyEmailSchema,
     onSubmit: async (values) => {
       try {
-        console.log(values, "values"); 
-        alert("Verification successful");
+        setIsSubmitting(true);
+        const resp = await verifyEmail(email, otp.join(""));
+        toast.success(resp?.message || "Verification successful!");
+        navigate("/admin/login");
       } catch (error: any) {
-        alert(error.response?.data?.error || "Verification failed");
+        toast.error(error?.message);
+      } finally {
+        setIsSubmitting(false);
       }
     },
   });
@@ -108,8 +123,12 @@ const VerifyEmail: React.FC = () => {
                 onKeyDown={handleKeyDown}
                 onFocus={handleFocus}
                 onPaste={handlePaste}
-                ref={(el) => {if(el){inputRefs.current[index] = el}}} 
-                className="shadow-xs flex w-[64px] items-center justify-center rounded-lg border border-stroke bg-white p-2 text-center text-2xl font-medium text-gray-5 outline-none sm:text-4xl dark:border-dark-3 dark:bg-white/5"
+                ref={(el) => {
+                  if (el) {
+                    inputRefs.current[index] = el;
+                  }
+                }}
+                className="w-[48px] p-2 border border-gray-300 text-center text-xl rounded-md focus:ring-2 focus:ring-purple-500"
               />
             ))}
           </div>
@@ -124,10 +143,22 @@ const VerifyEmail: React.FC = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"
-            className="w-full bg-gradient-to-r from-teal-400 to-pink-500 text-white py-2 px-4 rounded-md hover:shadow-lg transition duration-300"
+            disabled={isSubmitting}
+            className={`w-full bg-gradient-to-r from-teal-400 to-pink-500 text-white py-2 px-4 rounded-md hover:shadow-lg transition duration-300 ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Verify
+            {isSubmitting ? "Verifying..." : "Verify"}
           </motion.button>
+
+          <button
+            type="button" 
+            onClick={handleResendCode}
+            disabled={isResending}
+            className="w-full mt-3 text-blue-900 z-10 cursor-pointer hover:underline disabled:text-gray-500"
+          >
+            {"Resend Verification Code"}
+          </button>
         </form>
       </motion.div>
     </div>
